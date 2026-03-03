@@ -8,3 +8,4 @@ statsmodels
 imbalanced-learn
 xgboost
 optuna
+## -e . Refering to setup.py for get the package dependencies

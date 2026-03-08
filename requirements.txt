@@ -8,4 +8,8 @@ statsmodels
 imbalanced-learn
 xgboost
 optuna
+pymongo[srv]==3.11
+pymongo
+dotenv
+certifi
 ## -e . Refering to setup.py for get the package dependencies

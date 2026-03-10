@@ -12,4 +12,6 @@ pymongo[srv]==3.11
 pymongo
 dotenv
 certifi
+dill
+pyaml
 ## -e . Refering to setup.py for get the package dependencies

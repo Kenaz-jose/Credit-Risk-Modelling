@@ -1,0 +1,88 @@
+columns:
+
+  cust_id: str
+  age: int64
+  gender: str
+  marital_status: str
+  employment_status: str
+  income: int64
+  number_of_dependants: int64
+  residence_type: str
+  years_at_current_address: int64
+  city: str
+  state: str
+  zipcode: str
+
+  loan_id: str
+  loan_purpose: str
+  loan_type: str
+  sanction_amount: int64
+  loan_amount: int64
+  processing_fee: float64
+  gst: int64
+  net_disbursement: int64
+  loan_tenure_months: int64
+  principal_outstanding: int64
+  bank_balance_at_application: int64
+
+  disbursal_date: str
+  installment_start_dt: str
+
+  number_of_open_accounts: int64
+  number_of_closed_accounts: int64
+  total_loan_months: int64
+  delinquent_months: int64
+  total_dpd: int64
+  enquiry_count: int64
+  credit_utilization_ratio: int64
+
+  default: int64
+
+
+target_column: default
+
+
+drop_columns:
+  - cust_id
+  - loan_id
+  - disbursal_date
+  - installment_start_dt
+  - loan_amount
+  - income
+  - total_loan_months
+  - delinquent_months
+  - total_dpd
+  - sanction_amount
+  - processing_fee
+  - gst
+  - net_disbursement
+  - principal_outstanding
+
+
+engineered_features:
+  - loan_to_income
+  - delinquent_ratio
+  - avg_dpd_per_delinquency
+
+
+numerical_columns:
+  - age
+  - number_of_dependants
+  - years_at_current_address
+  - loan_tenure_months
+  - bank_balance_at_application
+  - number_of_open_accounts
+  - number_of_closed_accounts
+  - enquiry_count
+  - credit_utilization_ratio
+
+
+categorical_columns:
+  - gender
+  - marital_status
+  - employment_status
+  - residence_type
+  - city
+  - state
+  - loan_purpose
+  - loan_type

@@ -14,4 +14,6 @@ dotenv
 certifi
 dill
 pyaml
+statsmodels
+imbalanced-learn
 ## -e . Refering to setup.py for get the package dependencies

@@ -104,7 +104,21 @@ class DataTransformation:
 
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
-        
+
+    def clean_engineered_features(self, train_df: pd.DataFrame, test_df: pd.DataFrame):
+        try:
+
+            train_df = train_df.replace([np.inf, -np.inf], np.nan)
+            test_df = test_df.replace([np.inf, -np.inf], np.nan)
+
+            train_df = train_df.fillna(train_df.median(numeric_only=True))
+            test_df = test_df.fillna(test_df.median(numeric_only=True))
+
+            return train_df, test_df
+
+        except Exception as e:
+            raise CreditRiskModellingException(e, sys)
+
     def drop_unnecessary_columns(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple:
         """
         Drop columns that are not required for model training
@@ -277,7 +291,7 @@ class DataTransformation:
         try:
             X_train = X_train.replace([np.inf, -np.inf], np.nan)
             X_train = X_train.fillna(X_train.median())
-            
+
             smote = SMOTE(random_state=42)
             X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
             return X_train_resampled, y_train_resampled
@@ -309,6 +323,9 @@ class DataTransformation:
 
             logging.info("Adding engineered features")
             train_df, test_df = self.add_engineered_features(train_df, test_df)
+            
+            logging.info("Cleaning engineered features")
+            train_df, test_df = self.clean_engineered_features(train_df, test_df)
 
             logging.info("Dropping unnecessary columns")
             train_df, test_df = self.drop_unnecessary_columns(train_df, test_df)
@@ -321,7 +338,7 @@ class DataTransformation:
 
             logging.info("Applying VIF feature selection")
             X_train = self.remove_high_vif_features(X_train)
-            X_test = X_test[X_train.columns]
+            X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
 
             logging.info("Calculating IV for categorical features")
             temp_df = pd.concat([X_train, y_train], axis=1)
@@ -329,15 +346,33 @@ class DataTransformation:
 
             logging.info("Selecting features based on IV")
             X_train = self.select_features_by_iv(X_train, iv_df)
-            X_test = X_test[X_train.columns]
+            X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
 
             logging.info("Encoding categorical features")
             X_train, X_test = self.encode_categorical_features(X_train, X_test)
+            X_train = X_train.astype(float)
+            X_test = X_test.astype(float)
 
             logging.info("Applying SMOTE")
             X_train, y_train = self.apply_smote(X_train, y_train)
             
+            logging.info("Final NaN check")
+            X_train = X_train.replace([np.inf, -np.inf], np.nan)
+            X_test = X_test.replace([np.inf, -np.inf], np.nan)
+            median_values = X_train.median()
+            X_train = X_train.fillna(median_values)
+            X_test = X_test.fillna(median_values)
+            
+            logging.info(f"Final train shape: {X_train.shape}")
+            logging.info(f"Final test shape: {X_test.shape}")
+
             logging.info("Converting train and test to numpy array")
+            feature_names = X_train.columns.tolist()
+            save_object(
+                os.path.join(os.path.dirname(self.data_transformation_config.transformed_object_file_path),
+                "feature_names.pkl"),
+                feature_names
+            )
             train_arr = np.c_[X_train, y_train]
             test_arr = np.c_[X_test, y_test]
             
@@ -346,6 +381,9 @@ class DataTransformation:
             save_numpy_array_data(self.data_transformation_config.transformed_test_file_path,test_arr)
             save_object(self.data_transformation_config.transformed_object_file_path,scaler)
             
+            save_object("final_model/preprocessor.pkl",scaler)
+            save_object("final_model/feature_name.pkl",feature_names)
+
             logging.info("Preparing Data Transformation Artifact")
             data_transformation_artifact = DataTransformationArtifact(
                 transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,
@@ -354,6 +392,7 @@ class DataTransformation:
             )
 
             return data_transformation_artifact
+
 
         except Exception as e:
             raise CreditRiskModellingException(e, sys)

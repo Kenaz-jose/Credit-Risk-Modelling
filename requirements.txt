@@ -16,4 +16,6 @@ dill
 pyaml
 statsmodels
 imbalanced-learn
+mlflow
+dagshub
 ## -e . Refering to setup.py for get the package dependencies

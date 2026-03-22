@@ -3,10 +3,11 @@ import os
 import sys
 import pickle
 import numpy as np
+from sklearn.model_selection import StratifiedKFold, RandomizedSearchCV
+from sklearn.metrics import roc_auc_score, log_loss
+from sklearn.calibration import CalibratedClassifierCV
 from creditriskmodelling.exception.exception import CreditRiskModellingException
 from creditriskmodelling.logging.logger import logging
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import roc_auc_score
 
 def read_yaml_file(file_path: str) -> dict:
     try:
@@ -70,45 +71,53 @@ def load_numpy_array_data(file_path:str) -> np.array:
     except Exception as e:
         raise CreditRiskModellingException(e,sys)
 
-def evaluate_model(X_train, y_train, X_test, y_test, models, params):
+
+def evaluate_model(X_train, y_train, X_test, y_test, model, param_grid):
     try:
+   
+        cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
 
-        report = {}
-        best_models = {}
+        randomsearch = RandomizedSearchCV(
+            estimator=model,
+            param_distributions=param_grid,
+            n_iter=10,
+            cv=cv,
+            scoring="neg_log_loss",   
+            n_jobs=-1,
+            verbose=1,
+            random_state=42
+        )
 
-        for model_name, model in models.items():
+        
+        randomsearch.fit(X_train, y_train)
+        best_model = randomsearch.best_estimator_
 
-            param = params[model_name]
+        calibrated_model = CalibratedClassifierCV(
+            best_model,
+            method="isotonic",  
+            cv=3
+        )
 
-            randomsearch = RandomizedSearchCV(
-                        estimator=model,
-                        param_distributions=param,
-                        n_iter=5,        # number of random combinations
-                        cv=3,             # reduce folds for speed
-                        scoring="roc_auc",
-                        n_jobs=-1,
-                        verbose=1,
-                        random_state=42
-                    )
+        calibrated_model.fit(X_train, y_train)
 
-            randomsearch.fit(X_train, y_train)
+        y_train_pred = calibrated_model.predict_proba(X_train)[:, 1]
+        y_test_pred = calibrated_model.predict_proba(X_test)[:, 1]
 
-            best_model = randomsearch.best_estimator_
-            best_models[model_name] = best_model
+        
+        train_auc = roc_auc_score(y_train, y_train_pred)
+        test_auc = roc_auc_score(y_test, y_test_pred)
 
-            if hasattr(best_model, "predict_proba"):
-                y_train_pred = best_model.predict_proba(X_train)[:, 1]
-                y_test_pred = best_model.predict_proba(X_test)[:, 1]
-            else:
-                y_train_pred = best_model.decision_function(X_train)
-                y_test_pred = best_model.decision_function(X_test)
+        train_logloss = log_loss(y_train, y_train_pred)
+        test_logloss = log_loss(y_test, y_test_pred)
 
-            train_model_score = roc_auc_score(y_train, y_train_pred)
-            test_model_score = roc_auc_score(y_test, y_test_pred)
+        report = {
+            "train_auc": train_auc,
+            "test_auc": test_auc,
+            "train_log_loss": train_logloss,
+            "test_log_loss": test_logloss
+        }
 
-            report[model_name] = test_model_score
-
-        return report,best_models
+        return report, calibrated_model
 
     except Exception as e:
         raise CreditRiskModellingException(e, sys)

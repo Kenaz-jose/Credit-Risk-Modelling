@@ -13,9 +13,10 @@ FILE_NAME:str = "CreditData.csv"
 TRAIN_FILE_NAME:str = "train.csv"
 TEST_FILE_NAME:str = "test.csv"
 SCHEMA_FILE_PATH = os.path.join("data_schema","schema.yaml")
-PREPROCESSING_OBJECT_FILE_NAME: str = "preprocessor.pkl"
 SAVED_MODEL_DIR: str = os.path.join("saved_models")
 MODEL_FILE_NAME: str = "model.pkl"
+PREPROCESSING_OBJECT_FILE_NAME: str = "preprocessor.pkl"
+FEATURE_NAMES: str = "feature_names.pkl"
 
 """
 Data Ingestion related constant start with DATA_INGESTION VAR NAME

@@ -18,4 +18,8 @@ statsmodels
 imbalanced-learn
 mlflow
 dagshub
+fastapi
+pydantic
+shap
+streamlit
 ## -e . Refering to setup.py for get the package dependencies

@@ -1,22 +1,55 @@
 import os
 import sys
-from creditriskmodelling.constants.training_pipeline import SAVED_MODEL_DIR,MODEL_FILE_NAME
+import numpy as np
+import pandas as pd
 from creditriskmodelling.exception.exception import CreditRiskModellingException
-from creditriskmodelling.logging.logger import logging
+
 
 class CreditModel:
 
-    def __init__(self,preprocessor,model):
+    def __init__(self, preprocessor, model):
         try:
             self.preprocessor = preprocessor
             self.model = model
         except Exception as e:
-            raise CreditRiskModellingException(e,sys)
-    
-    def predict(self,X):
+            raise CreditRiskModellingException(e, sys)
+
+    def _prepare_input(self, X: pd.DataFrame):
         try:
-            X_transform = self.preprocessor.transform(X)
-            y_hat = self.model.predict(X_transform)
-            return y_hat
+
+            expected_cols = list(self.preprocessor.feature_names_in_)
+
+            # Add missing columns
+            for col in expected_cols:
+                if col not in X.columns:
+                    X[col] = 0
+
+            # Remove extra columns
+            X = X[expected_cols]
+
+            return X
+
         except Exception as e:
-            raise CreditRiskModellingException(e,sys)
+                raise CreditRiskModellingException(e, sys)
+
+    def predict(self, X: pd.DataFrame):
+        try:
+            X = self._prepare_input(X)
+
+            X_transformed = self.preprocessor.transform(X)
+
+            return self.model.predict(X_transformed)
+
+        except Exception as e:
+            raise CreditRiskModellingException(e, sys)
+
+    def predict_proba(self, X: pd.DataFrame):
+        try:
+            X = self._prepare_input(X)
+
+            X_transformed = self.preprocessor.transform(X)
+
+            return self.model.predict_proba(X_transformed)
+
+        except Exception as e:
+            raise CreditRiskModellingException(e, sys)

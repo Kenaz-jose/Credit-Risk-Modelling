@@ -5,21 +5,23 @@ import numpy as np
 from creditriskmodelling.exception.exception import CreditRiskModellingException
 from creditriskmodelling.logging.logger import logging
 from creditriskmodelling.entity.config_entity import DataTransformationConfig
-from creditriskmodelling.entity.artifact_entity import DataValidationArtifact,DataTransformationArtifact
+from creditriskmodelling.entity.artifact_entity import DataValidationArtifact, DataTransformationArtifact
 from creditriskmodelling.constants.training_pipeline import TARGET_COLUMN
-from creditriskmodelling.utils.main_utils.utils import save_numpy_array_data,save_object
-from sklearn.preprocessing import StandardScaler
-from statsmodels.stats.outliers_influence import variance_inflation_factor
+from creditriskmodelling.utils.main_utils.utils import save_numpy_array_data, save_object
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 class DataTransformation:
-    def __init__(self,data_validation_artifact:DataValidationArtifact,data_transformation_config:DataTransformationConfig):
+    def __init__(self, data_validation_artifact: DataValidationArtifact, data_transformation_config: DataTransformationConfig):
         try:
-            self.data_validation_artifact:DataValidationArtifact = data_validation_artifact
-            self.data_transformation_config:DataTransformationConfig = data_transformation_config
+            self.data_validation_artifact = data_validation_artifact
+            self.data_transformation_config = data_transformation_config
         except Exception as e:
-            raise CreditRiskModellingException(e,sys)
-    
+            raise CreditRiskModellingException(e, sys)
+
     @staticmethod
     def read_data(file_path) -> pd.DataFrame:
         try:
@@ -73,59 +75,30 @@ class DataTransformation:
 
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
-
-    def convert_zipcode_to_string(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple:
-        """
-        Convert zip_code column to string datatype
-        """
+        
+    # -------------------- Feature Engineering -------------------- #
+    def add_engineered_features(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
-            train_df["zipcode"] = train_df["zipcode"].astype(str)
-            test_df["zipcode"] = test_df["zipcode"].astype(str)
-            return train_df, test_df
-
+            df["loan_to_income"] = df["loan_amount"] / df["income"].replace(0, np.nan)
+            df["delinquent_ratio"] = df["delinquent_months"] / df["total_loan_months"].replace(0, np.nan)
+            df["avg_dpd_per_delinquency"] = df["total_dpd"] / df["delinquent_months"].replace(0, np.nan)
+            return df
+        
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
 
-    def add_engineered_features(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple:
-        """
-        Create new engineered features for the model
-        """
+    def clean_engineered_features(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
-            train_df["loan_to_income"] = train_df["loan_amount"] / train_df["income"].replace(0, np.nan)
-            test_df["loan_to_income"] = test_df["loan_amount"] / test_df["income"].replace(0, np.nan)
-
-            train_df["delinquent_ratio"] = train_df["delinquent_months"] / train_df["total_loan_months"].replace(0, np.nan)
-            test_df["delinquent_ratio"] = test_df["delinquent_months"] / test_df["total_loan_months"].replace(0, np.nan)
-
-            train_df["avg_dpd_per_delinquency"] = train_df["total_dpd"] / train_df["delinquent_months"].replace(0, np.nan)
-            test_df["avg_dpd_per_delinquency"] = test_df["total_dpd"] / test_df["delinquent_months"].replace(0, np.nan)
-
-            return train_df, test_df
-
+            df = df.replace([np.inf, -np.inf], np.nan)
+            df = df.fillna(df.median(numeric_only=True))
+            return df
+        
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
 
-    def clean_engineered_features(self, train_df: pd.DataFrame, test_df: pd.DataFrame):
+    def drop_unnecessary_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
-
-            train_df = train_df.replace([np.inf, -np.inf], np.nan)
-            test_df = test_df.replace([np.inf, -np.inf], np.nan)
-
-            train_df = train_df.fillna(train_df.median(numeric_only=True))
-            test_df = test_df.fillna(test_df.median(numeric_only=True))
-
-            return train_df, test_df
-
-        except Exception as e:
-            raise CreditRiskModellingException(e, sys)
-
-    def drop_unnecessary_columns(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple:
-        """
-        Drop columns that are not required for model training
-        """
-        try:
-            
-            columns_to_drop = [
+            cols_to_drop = [
                 "cust_id",
                 "loan_id",
                 "disbursal_date",
@@ -134,181 +107,85 @@ class DataTransformation:
                 "income",
                 "total_loan_months",
                 "delinquent_months",
-                "total_dpd"
+                "total_dpd","state",
+                "zipcode",
+                "city",
+                "sanction_amount",
+                "processing_fee",
+                "gst",
+                "net_disbursement",
+                "principal_outstanding"
             ]
-            train_df = train_df.drop(columns=columns_to_drop)
-            test_df = test_df.drop(columns=columns_to_drop)
-            return train_df, test_df
-
+            return df.drop(columns=cols_to_drop)
+        
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
-    
-    def split_input_target(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> tuple:
-        """
-        Separate input features and target column from train and test datasets
-        """
+        
+
+    # -------------------- WOE & IV -------------------- #
+    def calculate_woe_iv(self, df: pd.DataFrame, target_column: str) -> pd.DataFrame:
         try:
-            
-            X_train = train_df.drop(columns=[TARGET_COLUMN])
-            y_train = train_df[TARGET_COLUMN]
 
-            X_test = test_df.drop(columns=[TARGET_COLUMN])
-            y_test = test_df[TARGET_COLUMN]
-
-            return X_train, y_train, X_test, y_test
-
-        except Exception as e:
-            raise CreditRiskModellingException(e, sys)
-    
-
-    def scale_numerical_features(self, X_train: pd.DataFrame, X_test: pd.DataFrame) -> tuple:
-        """
-        Scale numerical columns using StandardScaler
-        """
-        try:
-            scaler = StandardScaler()
-            numerical_columns = X_train.select_dtypes(include=["int64", "float64"]).columns
-            X_train[numerical_columns] = scaler.fit_transform(X_train[numerical_columns])
-            X_test[numerical_columns] = scaler.transform(X_test[numerical_columns])
-
-            return X_train, X_test, scaler
-
-        except Exception as e:
-            raise CreditRiskModellingException(e, sys)
-    
-
-    def remove_high_vif_features(self, df: pd.DataFrame, threshold: float = 5.0) -> pd.DataFrame:
-        """
-        Iteratively remove features with high VIF
-        """
-        try:
-            numeric_df = df.select_dtypes(include=["int64", "float64"]).copy()
-
-            numeric_df = numeric_df.replace([np.inf, -np.inf], np.nan)
-            numeric_df = numeric_df.fillna(numeric_df.median())
-
-            while True:
-                vif_df = pd.DataFrame()
-                vif_df["feature"] = numeric_df.columns
-                vif_df["VIF"] = [
-                    variance_inflation_factor(numeric_df.values, i)
-                    for i in range(numeric_df.shape[1])
-                ]
-
-                max_vif = vif_df["VIF"].max()
-
-                if max_vif > threshold:
-                    drop_feature = vif_df.sort_values("VIF", ascending=False)["feature"].iloc[0]
-                    logging.info(f"Dropping feature {drop_feature} with VIF {max_vif}")
-
-                    numeric_df = numeric_df.drop(columns=[drop_feature])
-                else:
-                    break
-
-            remaining_numeric = list(numeric_df.columns)
-            categorical_cols = list(df.select_dtypes(exclude=["int64","float64"]).columns)
-
-            return df[remaining_numeric + categorical_cols]
-
-        except Exception as e:
-            raise CreditRiskModellingException(e, sys)
-
-    def calculate_woe_iv(self, df: pd.DataFrame, target_column: str):
-        """
-        Calculate WOE and IV for categorical features
-        """
-        try:
-            
             categorical_cols = df.select_dtypes(include=["object"]).columns
-
             iv_list = []
 
             for col in categorical_cols:
-
-                temp_df = pd.crosstab(df[col], df[target_column])
-
-                temp_df.columns = ["good", "bad"]
-
-                temp_df["dist_good"] = temp_df["good"] / temp_df["good"].sum()
-                temp_df["dist_bad"] = temp_df["bad"] / temp_df["bad"].sum()
-
-                temp_df["WOE"] = np.log(temp_df["dist_good"] / temp_df["dist_bad"])
-
-                temp_df["IV"] = (temp_df["dist_good"] - temp_df["dist_bad"]) * temp_df["WOE"]
-
-                iv = temp_df["IV"].sum()
-
-                iv_list.append((col, iv))
-
-            iv_df = pd.DataFrame(iv_list, columns=["feature", "IV"])
-
-            return iv_df
-
-        except Exception as e:
-            raise CreditRiskModellingException(e, sys)
-    
-    def select_features_by_iv(self, df: pd.DataFrame, iv_df: pd.DataFrame, threshold: float = 0.02):
-
-        try:
-            selected_cat_features = iv_df[iv_df["IV"] > threshold]["feature"].tolist()
-
-            numerical_features = df.select_dtypes(exclude=["object"]).columns.tolist()
-
-            final_features = numerical_features + selected_cat_features
-
-            logging.info(f"Selected categorical features: {selected_cat_features}")
-
-            return df[final_features]
-
+                temp = pd.crosstab(df[col], df[target_column])
+                temp.columns = ["good", "bad"]
+                temp["dist_good"] = temp["good"]/temp["good"].sum()
+                temp["dist_bad"] = temp["bad"]/temp["bad"].sum()
+                temp["WOE"] = np.log(temp["dist_good"] / temp["dist_bad"])
+                temp["IV"] = (temp["dist_good"] - temp["dist_bad"]) * temp["WOE"]
+                iv_list.append((col, temp["IV"].sum()))
+            return pd.DataFrame(iv_list, columns=["feature", "IV"])
+        
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
 
-    
-    def encode_categorical_features(self, X_train: pd.DataFrame, X_test: pd.DataFrame):
-        """
-        Encode categorical features using One-Hot Encoding
-        """
+    def select_features_by_iv(self, df: pd.DataFrame, iv_df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
         try:
-            categorical_cols = X_train.select_dtypes(include=["object"]).columns
-
-            X_train = pd.get_dummies(X_train, columns=categorical_cols, drop_first=True)
-            X_test = pd.get_dummies(X_test, columns=categorical_cols, drop_first=True)
-
-            # Align train and test columns
-            X_train, X_test = X_train.align(X_test, join="left", axis=1, fill_value=0)
-
-            logging.info("Categorical encoding completed")
-
-            return X_train, X_test
-
+            selected_cat = iv_df[iv_df["IV"] > threshold]["feature"].tolist()
+            numeric = df.select_dtypes(exclude=["object"]).columns.tolist()
+            return df[numeric + selected_cat]
+        
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
 
-    def apply_smote(self, X_train: pd.DataFrame, y_train: pd.Series):
-        """
-        Balance dataset using SMOTE
-        """
+    # -------------------- Scaling & Encoding Pipeline -------------------- #
+    def create_column_transformer(self, X_train: pd.DataFrame):
         try:
-            X_train = X_train.replace([np.inf, -np.inf], np.nan)
-            X_train = X_train.fillna(X_train.median())
+            numeric_features = X_train.select_dtypes(include=["int64","float64"]).columns.tolist()
+            categorical_features = X_train.select_dtypes(include=["object"]).columns.tolist()
 
+            numeric_pipeline = Pipeline(steps=[("scaler", StandardScaler())])
+            categorical_pipeline = Pipeline(steps=[("encoder", OneHotEncoder(drop=None, sparse_output=False))])
+
+            preprocessor = ColumnTransformer(transformers=[
+                ("num", numeric_pipeline, numeric_features),
+                ("cat", categorical_pipeline, categorical_features)
+            ], remainder="passthrough")
+            return preprocessor, numeric_features, categorical_features
+        
+        except Exception as e:
+            raise CreditRiskModellingException(e, sys)
+
+    # -------------------- SMOTE -------------------- #
+    def apply_smote(self, X_train: pd.DataFrame, y_train: pd.Series) -> tuple:
+        try:
             smote = SMOTE(random_state=42)
-            X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
-            return X_train_resampled, y_train_resampled
-
+            X_res, y_res = smote.fit_resample(X_train, y_train)
+            return X_res, y_res
+        
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
-    
+
+    # -------------------- Full Pipeline -------------------- #
     def initiate_data_transformation(self) -> DataTransformationArtifact:
-
-        logging.info("Entered initiate_data_transformation method")
-
         try:
-            
-            logging.info("Reading train and test dataset")
+            logging.info("Reading train and test data...")
             train_df = self.read_data(self.data_validation_artifact.valid_train_file_path)
             test_df = self.read_data(self.data_validation_artifact.valid_test_file_path)
-
+            
             logging.info("Handling missing values")
             train_df, test_df = self.handle_missing_values(train_df, test_df)
 
@@ -318,81 +195,52 @@ class DataTransformation:
             logging.info("Correcting loan purpose typo")
             train_df, test_df = self.correct_loan_purpose_typo(train_df, test_df)
 
-            logging.info("Converting zipcode to string")
-            train_df, test_df = self.convert_zipcode_to_string(train_df, test_df)
+            logging.info("Adding and cleaning engineered features...")
+            train_df = self.add_engineered_features(train_df)
+            train_df = self.clean_engineered_features(train_df)
 
-            logging.info("Adding engineered features")
-            train_df, test_df = self.add_engineered_features(train_df, test_df)
-            
-            logging.info("Cleaning engineered features")
-            train_df, test_df = self.clean_engineered_features(train_df, test_df)
+            test_df = self.add_engineered_features(test_df)
+            test_df = self.clean_engineered_features(test_df)
 
-            logging.info("Dropping unnecessary columns")
-            train_df, test_df = self.drop_unnecessary_columns(train_df, test_df)
+            logging.info("Dropping unnecessary columns...")
+            train_df = self.drop_unnecessary_columns(train_df)
+            test_df = self.drop_unnecessary_columns(test_df)
 
-            logging.info("Splitting input and target")
-            X_train, y_train, X_test, y_test = self.split_input_target(train_df, test_df)
+            X_train, y_train = train_df.drop(columns=[TARGET_COLUMN]), train_df[TARGET_COLUMN]
+            X_test, y_test = test_df.drop(columns=[TARGET_COLUMN]), test_df[TARGET_COLUMN]
 
-            logging.info("Scaling numerical features")
-            X_train, X_test, scaler = self.scale_numerical_features(X_train, X_test)
-
-            logging.info("Applying VIF feature selection")
-            X_train = self.remove_high_vif_features(X_train)
-            X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
-
-            logging.info("Calculating IV for categorical features")
+            logging.info("Calculating IV and selecting features...")
             temp_df = pd.concat([X_train, y_train], axis=1)
             iv_df = self.calculate_woe_iv(temp_df, TARGET_COLUMN)
-
-            logging.info("Selecting features based on IV")
             X_train = self.select_features_by_iv(X_train, iv_df)
             X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
 
-            logging.info("Encoding categorical features")
-            X_train, X_test = self.encode_categorical_features(X_train, X_test)
-            X_train = X_train.astype(float)
-            X_test = X_test.astype(float)
+            logging.info("Creating Column Transformer...")
+            preprocessor, numeric_features, categorical_features = self.create_column_transformer(X_train)
 
-            logging.info("Applying SMOTE")
-            X_train, y_train = self.apply_smote(X_train, y_train)
-            
-            logging.info("Final NaN check")
-            X_train = X_train.replace([np.inf, -np.inf], np.nan)
-            X_test = X_test.replace([np.inf, -np.inf], np.nan)
-            median_values = X_train.median()
-            X_train = X_train.fillna(median_values)
-            X_test = X_test.fillna(median_values)
-            
-            logging.info(f"Final train shape: {X_train.shape}")
-            logging.info(f"Final test shape: {X_test.shape}")
+            logging.info("Fitting and transforming train data...")
+            X_train = preprocessor.fit_transform(X_train)
+            X_test = preprocessor.transform(X_test)
 
-            logging.info("Converting train and test to numpy array")
-            feature_names = X_train.columns.tolist()
-            save_object(
-                os.path.join(os.path.dirname(self.data_transformation_config.transformed_object_file_path),
-                "feature_names.pkl"),
-                feature_names
-            )
+            X_train, y_train = self.apply_smote(pd.DataFrame(X_train), y_train)
+
+            logging.info("Saving transformed data and objects...")
+            feature_names = list(preprocessor.get_feature_names_out())            
             train_arr = np.c_[X_train, y_train]
             test_arr = np.c_[X_test, y_test]
-            
-            logging.info("Saving the train and test numpy array")
-            save_numpy_array_data(self.data_transformation_config.transformed_train_file_path,train_arr)
-            save_numpy_array_data(self.data_transformation_config.transformed_test_file_path,test_arr)
-            save_object(self.data_transformation_config.transformed_object_file_path,scaler)
-            
-            save_object("final_model/preprocessor.pkl",scaler)
-            save_object("final_model/feature_name.pkl",feature_names)
 
-            logging.info("Preparing Data Transformation Artifact")
-            data_transformation_artifact = DataTransformationArtifact(
+            save_numpy_array_data(self.data_transformation_config.transformed_train_file_path, train_arr)
+            save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, test_arr)
+            save_object(self.data_transformation_config.transformed_object_file_path, preprocessor)
+            save_object(self.data_transformation_config.feature_object_file_path,feature_names)
+
+            logging.info("Data transformation completed.")
+            return DataTransformationArtifact(
                 transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,
                 transformed_test_file_path=self.data_transformation_config.transformed_test_file_path,
-                transformed_object_file_path=self.data_transformation_config.transformed_object_file_path
+                transformed_object_file_path=self.data_transformation_config.transformed_object_file_path,
+                feature_object_file_path=self.data_transformation_config.feature_object_file_path
             )
-
-            return data_transformation_artifact
-
 
         except Exception as e:
             raise CreditRiskModellingException(e, sys)

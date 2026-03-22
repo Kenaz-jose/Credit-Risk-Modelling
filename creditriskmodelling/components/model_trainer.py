@@ -49,65 +49,46 @@ class ModelTrainer:
 
 
     def train_model(self,X_train,y_train,X_test,y_test):
-        models = {
-                "LogisticRegression": LogisticRegression(),
-                "RandomForest": RandomForestClassifier(),
-                "GradientBoosting": GradientBoostingClassifier(),
-                "AdaBoost": AdaBoostClassifier(),
-                "ExtraTrees": ExtraTreesClassifier()
-                }
+        model = LogisticRegression(random_state=42)
         param_grid = {
+            
+            "LogisticRegression": [
+               # 🔵 L2 (main stable model)
+                {
+                    "penalty": ["l2"],
+                    "C": [0.01, 0.1, 1, 5],
+                    "solver": ["lbfgs"],
+                    "max_iter": [1000],
+                    "class_weight": [None, "balanced"]
+                },
 
-                    "LogisticRegression": {
-                        "C": [0.001, 0.01, 0.1, 1, 10],
-                        "penalty": ["l1", "l2"],
-                        "solver": ["liblinear"],
-                        "max_iter": [100, 200, 500]
-                    },
-
-                    "RandomForest": {
-                        "n_estimators": [100, 200, 300],
-                        "max_depth": [None, 10, 20, 30],
-                        "min_samples_split": [2, 5, 10],
-
-                        "min_samples_leaf": [1, 2, 4],
-                        "max_features": ["sqrt", "log2"]
-                    },
-
-                    "GradientBoosting": {
-                        "n_estimators": [100, 200, 300],
-                        "learning_rate": [0.01, 0.05, 0.1],
-                        "max_depth": [3, 5],
-                        "subsample": [0.8, 1.0],
-                        "min_samples_split": [2, 5]
-                    },
-
-                    "ExtraTrees": {
-                        "n_estimators": [100, 200, 300],
-                        "max_depth": [None, 10, 20],
-                        "min_samples_split": [2, 5, 10],
-                        "min_samples_leaf": [1, 2, 4],
-                        "max_features": ["sqrt", "log2"]
-                    },
-
-                    "AdaBoost": {
-                        "n_estimators": [50, 100, 200],
-                        "learning_rate": [0.01, 0.1, 1]
-                    }
-
+                # 🟡 ElasticNet (controlled sparsity)
+                {
+                    "penalty": ["elasticnet"],
+                    "solver": ["saga"],
+                    "C": [0.01, 0.1, 1],
+                    "l1_ratio": [0.1, 0.2, 0.3],
+                    "max_iter": [2000],
+                    "class_weight": [None, "balanced"]
                 }
+            ]
+        }
+            
 
         print("NaN in X_train:", np.isnan(X_train).sum())
         print("NaN in X_test:", np.isnan(X_test).sum())
         print("NaN in y_train:", np.isnan(y_train).sum())
         print("NaN in y_test:", np.isnan(y_test).sum())
 
-        model_report,best_models = evaluate_model(X_train,y_train,X_test,y_test,models=models,params=param_grid)
-        
-        best_model_name = max(model_report, key=model_report.get)
-        best_model_score = model_report[best_model_name]
-        best_model = best_models[best_model_name]
-        logging.info(f"The best model: {best_model} and it's score: {best_model_score}")
+
+        model_report, best_model = evaluate_model(
+        X_train, y_train, X_test, y_test,
+        model=model,
+        param_grid=param_grid["LogisticRegression"])
+        best_model_score = model_report["test_auc"]
+        logging.info(f"Best Model: {best_model}")
+        logging.info(f"Train AUC: {model_report['train_auc']}")
+        logging.info(f"Test AUC: {model_report['test_auc']}")
 
         y_train_pred = best_model.predict(X_train)
         y_train_pred_proba = best_model.predict_proba(X_train)[:,1]
@@ -126,7 +107,6 @@ class ModelTrainer:
         Credit_Model = CreditModel(preprocessor=preprocessor,model=best_model)
         save_object(self.model_trainer_config.trained_model_file_path,obj=Credit_Model)
         
-        save_object("final_model/model.pkl",best_model)
         ### Model Trainer Artifact
         model_trainer_artifact = ModelTrainerArtifact(trained_model_file_path=self.model_trainer_config.trained_model_file_path,
                              train_metric_artifact=classification_train_metric,

@@ -1,13 +1,13 @@
 import os
 import sys
-from creditriskmodelling.components.data_ingestion import DataIngestion,DataIngestionArtifact
-from creditriskmodelling.components.data_validation import DataValidation
-from creditriskmodelling.components.model_trainer import ModelTrainer
-from creditriskmodelling.exception.exception import CreditRiskModellingException
-from creditriskmodelling.logging.logger import logging
-from creditriskmodelling.entity.config_entity import DataIngestionConfig,DataValidationConfig,DataTransformationConfig,ModelTrainerConfig
-from creditriskmodelling.entity.config_entity import TrainingPipelineConfig
-from creditriskmodelling.components.data_transformation import DataTransformation
+from src.components.data_ingestion import DataIngestion,DataIngestionArtifact
+from src.components.data_validation import DataValidation
+from src.components.model_trainer import ModelTrainer
+from src.exception.exception import CreditRiskModellingException
+from src.logging.logger import logging
+from src.entity.config_entity import DataIngestionConfig,DataValidationConfig,DataTransformationConfig,ModelTrainerConfig
+from src.entity.config_entity import TrainingPipelineConfig
+from src.components.data_transformation import DataTransformation
 if __name__ == "__main__":
     try:
         training_pipeline_config = TrainingPipelineConfig()

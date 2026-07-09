@@ -5,7 +5,7 @@ import pickle
 
 router = APIRouter(tags=["Prediction"])
 
-with open("final_model/model.pkl", "rb") as f:
+with open("output/model.pkl", "rb") as f:
     model = pickle.load(f)
 
 @router.post(

@@ -1,0 +1,63 @@
+age:
+  drift_status: false
+  p_value: 0.9575877722778651
+bank_balance_at_application:
+  drift_status: false
+  p_value: 0.8657618815611748
+credit_utilization_ratio:
+  drift_status: false
+  p_value: 0.6933790941698648
+default:
+  drift_status: false
+  p_value: 1.0
+delinquent_months:
+  drift_status: false
+  p_value: 0.9636309352306615
+enquiry_count:
+  drift_status: false
+  p_value: 0.9559856271204917
+gst:
+  drift_status: false
+  p_value: 0.9040926437152266
+income:
+  drift_status: false
+  p_value: 0.9728238152221347
+loan_amount:
+  drift_status: false
+  p_value: 0.9040926437152266
+loan_tenure_months:
+  drift_status: false
+  p_value: 0.6670574837842017
+net_disbursement:
+  drift_status: false
+  p_value: 0.9040926437152266
+number_of_closed_accounts:
+  drift_status: false
+  p_value: 0.580695553084791
+number_of_dependants:
+  drift_status: false
+  p_value: 0.9945257252756097
+number_of_open_accounts:
+  drift_status: false
+  p_value: 0.26377520272786115
+principal_outstanding:
+  drift_status: false
+  p_value: 0.853755149053427
+processing_fee:
+  drift_status: false
+  p_value: 0.8989938736569905
+sanction_amount:
+  drift_status: false
+  p_value: 0.947422915958381
+total_dpd:
+  drift_status: false
+  p_value: 0.6595171861473248
+total_loan_months:
+  drift_status: false
+  p_value: 0.08903175207782543
+years_at_current_address:
+  drift_status: false
+  p_value: 0.9803293901100987
+zipcode:
+  drift_status: false
+  p_value: 0.5659007408827688

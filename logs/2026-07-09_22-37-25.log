@@ -1,0 +1,51 @@
+[2026-07-09 22:37:29,994] 1025 httpx - INFO - HTTP Request: GET https://dagshub.com/api/v1/user "HTTP/1.1 200 OK"
+[2026-07-09 22:37:30,006] 107 dagshub - INFO - Accessing as kenazjose007
+[2026-07-09 22:37:31,836] 1025 httpx - INFO - HTTP Request: GET https://dagshub.com/api/v1/repos/kenazjose007/Credit-Risk-Modelling "HTTP/1.1 200 OK"
+[2026-07-09 22:37:33,679] 1025 httpx - INFO - HTTP Request: GET https://dagshub.com/api/v1/user "HTTP/1.1 200 OK"
+[2026-07-09 22:37:33,680] 107 dagshub - INFO - Initialized MLflow to track repo "kenazjose007/Credit-Risk-Modelling"
+[2026-07-09 22:37:33,681] 107 dagshub - INFO - Repository kenazjose007/Credit-Risk-Modelling initialized!
+[2026-07-09 22:37:34,135] 15 root - INFO - initiate the Data Ingestion
+[2026-07-09 22:37:37,244] 59 root - INFO - Initiating train test split
+[2026-07-09 22:37:37,269] 63 root - INFO - Performed train test split on dataframe
+[2026-07-09 22:37:37,269] 64 root - INFO - Existed split_data_as_train__test method of Data_Ingestion class
+[2026-07-09 22:37:37,269] 66 root - INFO - Creating train file path
+[2026-07-09 22:37:37,499] 72 root - INFO - Exported train file path
+[2026-07-09 22:37:37,499] 74 root - INFO - Creating test file path
+[2026-07-09 22:37:37,556] 80 root - INFO - Exported test file path
+[2026-07-09 22:37:37,589] 20 root - INFO - Data Initiation Completed
+[2026-07-09 22:37:37,589] 22 root - INFO - Initiating Data validation
+[2026-07-09 22:37:37,699] 31 root - INFO - Required number of column: 33
+[2026-07-09 22:37:37,699] 32 root - INFO - Data Frame has columns: 33
+[2026-07-09 22:37:37,699] 31 root - INFO - Required number of column: 33
+[2026-07-09 22:37:37,699] 32 root - INFO - Data Frame has columns: 33
+[2026-07-09 22:37:37,974] 27 root - INFO - Data Validation Completed
+[2026-07-09 22:37:37,974] 29 root - INFO - Initiated Data Transformation
+[2026-07-09 22:37:37,974] 183 root - INFO - Reading train and test data...
+[2026-07-09 22:37:38,069] 187 root - INFO - Handling missing values
+[2026-07-09 22:37:38,076] 190 root - INFO - Filtering processing fee
+[2026-07-09 22:37:38,090] 193 root - INFO - Correcting loan purpose typo
+[2026-07-09 22:37:38,093] 196 root - INFO - Adding and cleaning engineered features...
+[2026-07-09 22:37:38,174] 203 root - INFO - Dropping unnecessary columns...
+[2026-07-09 22:37:38,187] 214 root - INFO - Calculating IV and selecting features...
+[2026-07-09 22:37:38,226] 220 root - INFO - Creating Column Transformer...
+[2026-07-09 22:37:38,228] 223 root - INFO - Fitting and transforming train data...
+[2026-07-09 22:37:38,319] 229 root - INFO - Saving transformed data and objects...
+[2026-07-09 22:37:38,335] 48 root - INFO - Entered the save_object method of MainUtils class
+[2026-07-09 22:37:38,335] 53 root - INFO - Exited the save_object method of MainUtils class
+[2026-07-09 22:37:38,335] 48 root - INFO - Entered the save_object method of MainUtils class
+[2026-07-09 22:37:38,335] 53 root - INFO - Exited the save_object method of MainUtils class
+[2026-07-09 22:37:38,335] 239 root - INFO - Data transformation completed.
+[2026-07-09 22:37:38,336] 34 root - INFO - Data Transformation completed
+[2026-07-09 22:37:38,336] 36 root - INFO - Model Training Started
+[2026-07-09 22:37:51,076] 88 root - INFO - Best Model: CalibratedClassifierCV(cv=3,
+                       estimator=LogisticRegression(C=1,
+                                                    class_weight='balanced',
+                                                    max_iter=1000, penalty='l2',
+                                                    random_state=42),
+                       method='isotonic')
+[2026-07-09 22:37:51,076] 89 root - INFO - Train AUC: 0.9869999002516554
+[2026-07-09 22:37:51,077] 90 root - INFO - Test AUC: 0.9832288721916382
+[2026-07-09 22:38:23,752] 48 root - INFO - Entered the save_object method of MainUtils class
+[2026-07-09 22:38:23,753] 53 root - INFO - Exited the save_object method of MainUtils class
+[2026-07-09 22:38:23,753] 112 root - INFO - Model Trainer Artifact: ModelTrainerArtifact(trained_model_file_path='output/model.pkl', train_metric_artifact=ClassificationMetricArtifact(f1_score=0.950951624626484, precision_score=0.9355633243286191, recall_score=0.9668546091526166, roc_auc_score=0.9869999002516554, ks_statistic=np.float64(0.900755419312459)), test_metric_artifact=ClassificationMetricArtifact(f1_score=0.7042628774422736, precision_score=0.5640113798008535, recall_score=0.9373522458628841, roc_auc_score=0.9832288721916382, ks_statistic=np.float64(0.8824703665129197)))
+[2026-07-09 22:38:23,753] 40 root - INFO - Model Training artifact created

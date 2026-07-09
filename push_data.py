@@ -1,18 +1,17 @@
 import os
 import sys
 import json
-import certifi
 import pandas as pd
 import numpy as np
 import pymongo
 
-from creditriskmodelling.logging.logger import logging
-from creditriskmodelling.exception.exception import CreditRiskModellingException
+from pathlib import Path
+from src.logging.logger import logging
+from src.exception.exception import CreditRiskModellingException
 from dotenv import load_dotenv
 load_dotenv()
 
 MONGO_DB_URL = os.getenv("MONGO_DB_URL")
-ca = certifi.where() 
 
 class CreditDataExtract():
     def __init__(self):
@@ -42,7 +41,7 @@ class CreditDataExtract():
     
     def insert_data_to_mongodb(self,records,database,collection):
         try:        
-            self.mongo_client = pymongo.MongoClient(MONGO_DB_URL, tlsCAFile=ca)
+            self.mongo_client = pymongo.MongoClient(MONGO_DB_URL)
             db = self.mongo_client[database]
             collection = db[collection]
 
@@ -58,9 +57,12 @@ class CreditDataExtract():
             raise CreditRiskModellingException(e,sys)    
         
 if __name__ == '__main__':
-    FILE_PATH_CUSTOMER = "Credit_Data\\customers.csv"
-    FILE_PATH_LOAN = "Credit_Data\\loans.csv"
-    FILE_PATH_BUREAU = "Credit_Data\\bureau_data.csv"
+
+    BASE_DIR = Path("Credit_Data")
+
+    FILE_PATH_CUSTOMER = BASE_DIR / "customers.csv"
+    FILE_PATH_LOAN = BASE_DIR / "loans.csv"
+    FILE_PATH_BUREAU = BASE_DIR / "bureau_data.csv"
 
     DATABASE="CREDIT_RISK_MODELLING"
     Collection="CreditData"

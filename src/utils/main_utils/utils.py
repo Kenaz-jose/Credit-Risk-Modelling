@@ -4,9 +4,11 @@ import sys
 import pickle
 import numpy as np
 import pandas as pd
+from sklearn.metrics import brier_score_loss
 from sklearn.model_selection import StratifiedKFold, RandomizedSearchCV
 from sklearn.metrics import roc_auc_score, log_loss
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.calibration import calibration_curve
 from src.exception.exception import CreditRiskModellingException
 from src.logging.logger import logging
 
@@ -95,7 +97,7 @@ def evaluate_model(X_train, y_train, X_test, y_test, model, param_grid,preproces
 
         calibrated_model = CalibratedClassifierCV(
             best_model,
-            method="isotonic",  
+            method="sigmoid",  
             cv=3
         )
 
@@ -134,8 +136,36 @@ def evaluate_model(X_train, y_train, X_test, y_test, model, param_grid,preproces
 
         y_train_pred = calibrated_model.predict_proba(X_train)[:, 1]
         y_test_pred = calibrated_model.predict_proba(X_test)[:, 1]
-
         
+        print("\n========== PROBABILITY SUMMARY ==========")
+        print(pd.Series(y_test_pred).describe())
+
+        bins = np.arange(0, 1.1, 0.1)
+        hist = (
+            pd.Series(pd.cut(y_test_pred, bins=bins, include_lowest=True))
+            .value_counts(sort=False)
+        )
+
+        print("\n========== PROBABILITY HISTOGRAM ==========")
+        print(hist)
+        
+        print("\n========== BRIER SCORE ==========")
+        train_brier = brier_score_loss(y_train, y_train_pred)
+        test_brier = brier_score_loss(y_test, y_test_pred)
+        print(f"Train Brier Score: {train_brier:.4f}")
+        print(f"Test Brier Score: {test_brier:.4f}")
+        
+        print("\n========== CALIBRATION CURVE ==========")
+        prob_true, prob_pred = calibration_curve(
+            y_test,
+            y_test_pred,
+            n_bins=10,
+            strategy="quantile"
+        )
+
+        for pred, actual in zip(prob_pred, prob_true):
+            print(f"Predicted={pred:.3f}  Actual={actual:.3f}")
+
         train_auc = roc_auc_score(y_train, y_train_pred)
         test_auc = roc_auc_score(y_test, y_test_pred)
 

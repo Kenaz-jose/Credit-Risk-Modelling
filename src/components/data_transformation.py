@@ -168,15 +168,6 @@ class DataTransformation:
         except Exception as e:
             raise CreditRiskModellingException(e, sys)
 
-    def apply_smote(self, X_train: pd.DataFrame, y_train: pd.Series) -> tuple:
-        try:
-            smote = SMOTE(random_state=42)
-            X_res, y_res = smote.fit_resample(X_train, y_train)
-            return X_res, y_res
-        
-        except Exception as e:
-            raise CreditRiskModellingException(e, sys)
-
     ## Full Pipeline
     def initiate_data_transformation(self) -> DataTransformationArtifact:
         try:
@@ -224,8 +215,6 @@ class DataTransformation:
             X_train = preprocessor.fit_transform(X_train)
             X_test = preprocessor.transform(X_test)
 
-            X_train, y_train = self.apply_smote(pd.DataFrame(X_train), y_train)
-
             logging.info("Saving transformed data and objects...")
             feature_names = list(preprocessor.get_feature_names_out())            
             train_arr = np.c_[X_train, y_train]
@@ -235,7 +224,7 @@ class DataTransformation:
             save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, test_arr)
             save_object(self.data_transformation_config.transformed_object_file_path, preprocessor)
             save_object(self.data_transformation_config.feature_object_file_path,feature_names)
-
+            
             logging.info("Data transformation completed.")
             return DataTransformationArtifact(
                 transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,

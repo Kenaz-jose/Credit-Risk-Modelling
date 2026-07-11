@@ -24,9 +24,7 @@ class LoanApplicationRequest(BaseModel):
         le=80
     )
 
-    # -----------------------------------------------------
     # FINANCIAL INFO
-    # -----------------------------------------------------
     income: float = Field(
         ...,
         gt=0,
@@ -80,8 +78,8 @@ class LoanApplicationRequest(BaseModel):
     credit_utilization_ratio: float = Field(
         ...,
         ge=0,
-        le=1,
-        description="Credit utilization ratio between 0 and 1"
+        le=100,
+        description="Credit utilization ratio between 0 and 100"
     )
 
     # -----------------------------------------------------
@@ -191,27 +189,21 @@ class LoanApplicationRequest(BaseModel):
             10
         )
 
-        # ---------------------------------------------
         # Delinquent ratio
-        # ---------------------------------------------
         delinquent_ratio = (
             self.delinquent_months / self.total_loan_months
             if self.total_loan_months > 0
             else 0
         )
 
-        # ---------------------------------------------
         # Avg DPD
-        # ---------------------------------------------
         avg_dpd_per_delinquency = (
             self.total_dpd / self.delinquent_months
             if self.delinquent_months > 0
             else 0
         )
 
-        # ---------------------------------------------
         # Final model features
-        # ---------------------------------------------
         return {
             "age": self.age,
             "number_of_dependants": self.number_of_dependants,
@@ -225,7 +217,7 @@ class LoanApplicationRequest(BaseModel):
             # Already validated 0-1
             "credit_utilization_ratio": min(
                 self.credit_utilization_ratio,
-                1
+                100
             ),
 
             "loan_to_income": loan_to_income,
@@ -238,18 +230,14 @@ class LoanApplicationRequest(BaseModel):
         }
 
 
-# =========================================================
 # FEATURE INSIGHT RESPONSE
-# =========================================================
 class FeatureInsight(BaseModel):
     name: str
     effect: str
     explanation: str
 
 
-# =========================================================
 # RESPONSE SCHEMA
-# =========================================================
 class LoanApplicationResponse(BaseModel):
 
     probability: float

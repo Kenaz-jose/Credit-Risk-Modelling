@@ -3,51 +3,99 @@ import requests
 
 st.set_page_config(page_title="CreditGuard", page_icon="💳", layout="wide")
 
-# -------------------------------
 # 🎨 STYLING
-# -------------------------------
 st.markdown("""
 <style>
-.stApp {
-    background-color: #f8fafc;
+
+/* Widget Labels */
+div[data-testid="stWidgetLabel"] p {
+    color: #1e293b !important;
+    font-size: 20px !important;   /* Increase size */
+    font-weight: 700 !important;  /* Make it bolder */
+    margin-bottom: 8px !important;
+    letter-spacing: 0.3px;
 }
-.stWidget label {
-    white-space: nowrap !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 0.85rem !important;
-    color: #475569 !important;
-    font-weight: 600 !important;
-}
+
+/* ---------- Column Spacing ---------- */
 [data-testid="column"] {
-    padding-left: 5px !important;
-    padding-right: 5px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
 }
+
+/* ---------- Number Inputs ---------- */
+div[data-baseweb="input"] > div {
+    min-height: 56px !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+}
+
+/* ---------- Select Boxes ---------- */
+div[data-baseweb="select"] > div {
+    min-height: 56px !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+}
+
+/* ---------- Input Text ---------- */
+input {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+}
+
+/* ---------- Select Text ---------- */
+div[data-baseweb="select"] span {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+}
+
+/* ---------- Section Headers ---------- */
 .category-header {
     color: #1E3A8A;
+    font-size: 1.4rem;
     font-weight: 700;
-    font-size: 1.3rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0.8rem;
-    border-bottom: 2px solid #cbd5e1;
-    padding-bottom: 5px;
+    margin-top: 1.8rem;
+    margin-bottom: 1rem;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #CBD5E1;
 }
-.stButton>button {
-    margin-top: 20px;
+
+/* ---------- Predict Button ---------- */
+.stButton > button {
     width: 100%;
+    height: 52px;
+    margin-top: 20px;
     background-color: #1E3A8A;
     color: white;
-    font-weight: bold;
-    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    transition: 0.3s;
 }
+
+.stButton > button:hover {
+    background-color: #1D4ED8;
+    color: white;
+}
+
+/* ---------- Metrics ---------- */
+[data-testid="metric-container"] {
+    border-radius: 12px;
+    padding: 15px;
+}
+
+/* ---------- Reduce Vertical Gaps ---------- */
+div[data-testid="stVerticalBlock"] > div {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 st.title("💳 CreditGuard - Credit Risk Prediction")
 
-# -------------------------------
 # 📋 FORM
-# -------------------------------
 with st.form("credit_form", border=False):
 
     # PERSONAL
@@ -77,7 +125,7 @@ with st.form("credit_form", border=False):
 
     with c1: number_of_open_accounts = st.number_input("Open Accounts", 0, 50, 0)
     with c2: number_of_closed_accounts = st.number_input("Closed Accounts", 0, 50, 0)
-    with c3: credit_utilization_ratio = st.number_input("Credit Utilization (0-1)", 0.0, 1.0, 0.0)
+    with c3: credit_utilization_ratio = st.number_input("Credit Utilization (0-100)", 0.0, 100.0, 30.0)
     with c4: delinquent_months = st.number_input("Delinquent Months", 0, 50, 0)
     with c5: total_dpd = st.number_input("Total DPD", 0, 1000, 0)
     with c6: enquiry_count = st.number_input("Enquiry Count", 0, 100, 0)
@@ -86,12 +134,7 @@ with st.form("credit_form", border=False):
     with btn_col:
         submitted = st.form_submit_button("Predict")
 
-# -------------------------------
-# 🚀 PREDICTION
-# -------------------------------
-# ------------------------------- 
 # 🚀 PREDICTION & DISPLAY
-# ------------------------------- 
 if submitted:
     payload = {
         "age": age,
@@ -115,36 +158,38 @@ if submitted:
 
     try:
         response = requests.post("http://localhost:8000/predict", json=payload)
+        if response.status_code != 200:
+            st.error(response.text)
+            st.stop()
+
         result = response.json()
 
         st.markdown("---")
 
-        # -------------------------------
         # ✅ Decision
-        # -------------------------------
         decision = result.get("decision", "N/A")
         risk_level = result.get("risk_level", "N/A")
         message = result.get("message", "")
 
         if decision.upper() == "APPROVE":
             st.success("✅ Loan Approved")
+
+        elif decision.upper() == "REVIEW":
+            st.warning("🟡 Manual Review Required")
+
         else:
             st.error("❌ Loan Rejected")
 
-        # -------------------------------
         # 📌 Summary
-        # -------------------------------
         st.markdown(f"""
         ### 📌 Summary
 
         - **Decision:** {decision}  
         - **Risk Level:** {risk_level}  
-        - **Confidence:** {round(result.get("probability", 0), 2)}%  
+        - **Probability:** {round(result.get("probability", 0), 2)}%  
         """)
 
-        # -------------------------------
         # 💳 CREDIT SCORE (NEW)
-        # -------------------------------
         credit_score = result.get("credit_score", 0)
         score_band = result.get("score_band", "N/A")
 
@@ -207,9 +252,7 @@ if submitted:
 
         st.caption("Score ranges: 750+ Excellent | 650–749 Good | 550–649 Fair | Below 550 Poor")
 
-        # -------------------------------
         # 📊 Metrics
-        # -------------------------------
         default_prob = result.get("probability", 0) / 100
         approval_prob = 1 - default_prob
 
@@ -222,9 +265,7 @@ if submitted:
         if message:
             st.info(message)
 
-        # -------------------------------
         # 📊 Approval Probability Bar
-        # -------------------------------
         st.subheader("📊 Approval Probability")
 
         if approval_prob > 0.7:
@@ -264,9 +305,7 @@ if submitted:
         </div>
         """, unsafe_allow_html=True)
 
-        # -------------------------------
         # ⚡ Top Factors
-        # -------------------------------
         top_factors = result.get("top_factors", [])
 
         if top_factors:
@@ -286,26 +325,35 @@ if submitted:
                     </div>
                     """, unsafe_allow_html=True)
 
-        # -------------------------------
         # 🧠 Feature Summary
-        # -------------------------------
-        feature_summary = result.get("feature_summary", {})
+        feature_summary = result.get("top_feature_insights", [])
 
         if feature_summary:
             st.subheader("🧠 Feature Insights")
 
-            for feat, info in feature_summary.items():
+            for feature in feature_summary:
+                effect = feature["effect"]
+
+                if effect == "Increased Risk":
+                    color = "#fee2e2"
+                    border = "#dc2626"
+                    icon = "🔴"
+                else:
+                    color = "#dcfce7"
+                    border = "#16a34a"
+                    icon = "🟢"
+
                 st.markdown(f"""
                 <div style="
-                    background-color:#ffffff;
+                    background-color:{color};
                     padding:15px;
                     border-radius:10px;
                     margin-bottom:10px;
-                    box-shadow:0px 2px 6px rgba(0,0,0,0.05);
+                    border-left:5px solid {border};
                 ">
-                    <b style="color:#1E3A8A;">{feat.replace("_", " ").title()}</b><br>
-                    <span><b>Value:</b> {info['value']}</span><br>
-                    <span style="color:#475569;">{info['explanation']}</span>
+                    <b>{icon} {feature["name"]}</b><br>
+                    <b>{feature["effect"]}</b><br>
+                    {feature["explanation"]}
                 </div>
                 """, unsafe_allow_html=True)
 

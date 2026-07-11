@@ -51,10 +51,8 @@ def validate_and_clean_features(features_dict):
 
     utilization = features_dict["credit_utilization_ratio"]
 
-    if utilization > 1:
-        utilization = utilization / 100
-
-    utilization = max(0, min(utilization, 1))
+    if not (0 <= utilization <= 100):
+        raise ValueError("credit_utilization_ratio must be between 0 and 100")
 
     features_dict["credit_utilization_ratio"] = utilization
 
@@ -101,8 +99,6 @@ def make_prediction(
     logger.info(f"Predicted Probabilities: {probabilities}")
 
     probability = float(probabilities[0][1])
-
-    probability = float(np.clip(probability, 0.01, 0.99))
     
     logger.info(f"Default Probability: {probability}")
 
@@ -134,12 +130,12 @@ def make_prediction(
         manual_review = True
 
 
-    if probability > 0.5:
+    if probability > 0.7:
 
         risk_level = "HIGH"
         decision = "REJECT"
 
-    elif 0.3 <= probability <= 0.5:
+    elif 0.4 <= probability <= 0.7:
 
         risk_level = "MEDIUM"
         decision = "REVIEW"

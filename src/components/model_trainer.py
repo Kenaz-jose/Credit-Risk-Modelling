@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+import pandas as pd
 import mlflow
 from src.exception.exception import CreditRiskModellingException
 from src.logging.logger import logging
@@ -76,6 +77,16 @@ class ModelTrainer:
         print("NaN in X_test:", np.isnan(X_test).sum())
         print("NaN in y_train:", np.isnan(y_train).sum())
         print("NaN in y_test:", np.isnan(y_test).sum())
+
+        print("\n========== TRAIN TARGET DISTRIBUTION ==========")
+        print(pd.Series(y_train).value_counts().rename("Count"))
+        print("\nPercentage:")
+        print((pd.Series(y_train).value_counts(normalize=True) * 100).round(2).astype(str) + "%")
+
+        print("\n========== TEST TARGET DISTRIBUTION ==========")
+        print(pd.Series(y_test).value_counts().rename("Count"))
+        print("\nPercentage:")
+        print((pd.Series(y_test).value_counts(normalize=True) * 100).round(2).astype(str) + "%")
 
         preprocessor = load_object(file_path=self.data_transformation_artifact.transformed_object_file_path)
 
